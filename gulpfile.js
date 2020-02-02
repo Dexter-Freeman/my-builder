@@ -10,9 +10,7 @@ var gulp           = require('gulp'),
 		imagemin       = require('gulp-imagemin'),
 		cache          = require('gulp-cache'),
 		autoprefixer   = require('gulp-autoprefixer'),
-		ftp            = require('vinyl-ftp'),
-		notify         = require("gulp-notify"),
-		rsync          = require('gulp-rsync');
+		notify         = require("gulp-notify");
 
 	gulp.task('browser-sync', function() {
 		browserSync({
@@ -27,11 +25,11 @@ var gulp           = require('gulp'),
 
 // Пользовательские скрипты проекта
 
-gulp.task('common-js', function() {
+gulp.task('js', function() {
 	return gulp.src([
 		'app/js/common.js',
 		])
-	.pipe(concat('common.min.js'))
+	.pipe(concat('scripts.min.js'))
 	.pipe(uglify())
 	.pipe(gulp.dest('app/js'));
 });
@@ -89,39 +87,6 @@ gulp.task('build', ['removedist', 'imagemin', 'sass', 'js'], function() {
 		'app/fonts/**/*',
 		]).pipe(gulp.dest('dist/fonts'));
 
-});
-
-gulp.task('deploy', function() {
-
-	var conn = ftp.create({
-		host:      'hostname.com',
-		user:      'username',
-		password:  'userpassword',
-		parallel:  10,
-		log: gutil.log
-	});
-
-	var globs = [
-	'dist/**',
-	'dist/.htaccess',
-	];
-	return gulp.src(globs, {buffer: false})
-	.pipe(conn.dest('/path/to/folder/on/server'));
-
-});
-
-gulp.task('rsync', function() {
-	return gulp.src('dist/**')
-	.pipe(rsync({
-		root: 'dist/',
-		hostname: 'username@yousite.com',
-		destination: 'yousite/public_html/',
-		// include: ['*.htaccess'], // Скрытые файлы, которые необходимо включить в деплой
-		recursive: true,
-		archive: true,
-		silent: false,
-		compress: true
-	}));
 });
 
 gulp.task('removedist', function() { return del.sync('dist'); });
