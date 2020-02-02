@@ -1,17 +1,7 @@
-# Учебная сборка Loftschool
-Порташ Юрий
-Добавил копирование шрифтов, минификацию изображений при переносе на билд
-Сделал таск для спрайтов
+<h1>Dexter Freeman's Project</h1>
 
-> Сборка работает на gulp версии 4.0. 
 
-#### Для начала работы
 
-1. ```clone this repo```
-2. ```cd path/to/...```
-3. ```npm install gulpjs/gulp-cli -g```  
-> Установка последней версии Gulp CLI tools глобально (подробнее - [GitHub](https://github.com/gulpjs/gulp/blob/4.0/docs/getting-started.md) )
+<p><strong>Author:</strong> <a href="https://www.linkedin.cn/in/%D1%8E%D1%80%D0%B8%D0%B9-%D0%BF%D0%BE%D1%80%D1%82%D0%B0%D1%88-449228194/" target="_blank">Dexter Freeman</a></p>
 
-4. ```npm install```
-6. ```run gulp``` 
-
+You can see this project in work on **[GitHub](https://github.com/Dexter-Freeman "Dexter Freeman's Project")**

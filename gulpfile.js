@@ -1,43 +1,130 @@
-'use strict';
+var gulp           = require('gulp'),
+		gutil          = require('gulp-util' ),
+		sass           = require('gulp-sass'),
+		browserSync    = require('browser-sync'),
+		concat         = require('gulp-concat'),
+		uglify         = require('gulp-uglify'),
+		cleanCSS       = require('gulp-clean-css'),
+		rename         = require('gulp-rename'),
+		del            = require('del'),
+		imagemin       = require('gulp-imagemin'),
+		cache          = require('gulp-cache'),
+		autoprefixer   = require('gulp-autoprefixer'),
+		ftp            = require('vinyl-ftp'),
+		notify         = require("gulp-notify"),
+		rsync          = require('gulp-rsync');
 
-// Описываем глобальную переменную "$" в которой описываем свойства к которым будем обращаться в других файлах
-global.$ = {
-  package: require('./package.json'),
-  config: require('./gulp/config'),
-  path: {
-    task: require('./gulp/paths/tasks.js'),
-    jsFoundation: require('./gulp/paths/js.foundation.js'),
-    cssFoundation: require('./gulp/paths/css.foundation.js'),
-    app: require('./gulp/paths/app.js')
-  },
-  gulp: require('gulp'),
-  del: require('del'),
-  browserSync: require('browser-sync').create(),
-  gp: require('gulp-load-plugins')()
-};
+	gulp.task('browser-sync', function() {
+		browserSync({
+			server: {
+				baseDir: 'app'
+			},
+			notify: false,
+			// tunnel: true,
+			// tunnel: "projectmane", //Demonstration page: http://projectmane.localtunnel.me
+		});
+	});
 
-// Используем глобальную переменную "$" и ее свойство "path" у которого используем свойство "task" для того чтобы реквайрить все таски
-$.path.task.forEach(function(taskPath) {
-  require(taskPath)();
+// Пользовательские скрипты проекта
+
+gulp.task('common-js', function() {
+	return gulp.src([
+		'app/js/common.js',
+		])
+	.pipe(concat('common.min.js'))
+	.pipe(uglify())
+	.pipe(gulp.dest('app/js'));
 });
 
+gulp.task('scripts', function() {
+	return gulp.src([
+		// 'node_modules/jquery/dist/jquery.min.js', // Optional jQuery plug-in (npm i --save-dev jquery)
+		// 'app/js/_libs.js', // JS libraries (all in one)
+		'app/js/common.js', // Custom scripts. Always at the end
+		])
+	.pipe(concat('scripts.min.js'))
+	.pipe(uglify()) // Minify js (opt.)
+	.pipe(gulp.dest('app/js'))
+	.pipe(browserSync.reload({ stream: true }))
+});
 
-// Используем глобальную переменную "$" и ее свойство "gulp"  для описания дефолтного таска
-$.gulp.task('default', $.gulp.series(
-  'clean',
-  'sprite:png-gif',
-  $.gulp.parallel(
-    'sass',
-    'pug',
-    'js:foundation',
-    'js:process',
-    'copy:image',
-    'copy:fonts',
-    'css:foundation',
-    'sprite:svg'
-  ),
-  $.gulp.parallel(
-    'watch',
-    'serve'
-  )
-));
+gulp.task('sass', function() {
+	return gulp.src('app/sass/**/*.sass')
+	.pipe(sass({outputStyle: 'expanded'}).on("error", notify.onError()))
+	.pipe(rename({suffix: '.min', prefix : ''}))
+	.pipe(autoprefixer(['last 15 versions']))
+	.pipe(cleanCSS()) // Опционально, закомментировать при отладке
+	.pipe(gulp.dest('app/css'))
+	.pipe(browserSync.stream())
+});
+
+gulp.task('watch', ['sass', 'js', 'browser-sync'], function() {
+	gulp.watch('app/sass/**/*.sass', ['sass']);
+	gulp.watch(['libs/**/*.js', 'app/js/common.js'], ['js']);
+	gulp.watch('app/*.html', browserSync.reload);
+});
+
+gulp.task('imagemin', function() {
+	return gulp.src('app/img/**/*')
+	.pipe(cache(imagemin())) // Cache Images
+	.pipe(gulp.dest('dist/img')); 
+});
+
+gulp.task('build', ['removedist', 'imagemin', 'sass', 'js'], function() {
+
+	var buildFiles = gulp.src([
+		'app/*.html',
+		'app/.htaccess',
+		]).pipe(gulp.dest('dist'));
+
+	var buildCss = gulp.src([
+		'app/css/main.min.css',
+		]).pipe(gulp.dest('dist/css'));
+
+	var buildJs = gulp.src([
+		'app/js/scripts.min.js',
+		]).pipe(gulp.dest('dist/js'));
+
+	var buildFonts = gulp.src([
+		'app/fonts/**/*',
+		]).pipe(gulp.dest('dist/fonts'));
+
+});
+
+gulp.task('deploy', function() {
+
+	var conn = ftp.create({
+		host:      'hostname.com',
+		user:      'username',
+		password:  'userpassword',
+		parallel:  10,
+		log: gutil.log
+	});
+
+	var globs = [
+	'dist/**',
+	'dist/.htaccess',
+	];
+	return gulp.src(globs, {buffer: false})
+	.pipe(conn.dest('/path/to/folder/on/server'));
+
+});
+
+gulp.task('rsync', function() {
+	return gulp.src('dist/**')
+	.pipe(rsync({
+		root: 'dist/',
+		hostname: 'username@yousite.com',
+		destination: 'yousite/public_html/',
+		// include: ['*.htaccess'], // Скрытые файлы, которые необходимо включить в деплой
+		recursive: true,
+		archive: true,
+		silent: false,
+		compress: true
+	}));
+});
+
+gulp.task('removedist', function() { return del.sync('dist'); });
+gulp.task('clearcache', function () { return cache.clearAll(); });
+
+gulp.task('default', ['watch']);
